@@ -8,6 +8,10 @@
 #include "../serialib/lib/serialib.h"
 
 #define BAUDRATE 1152000
+#define MSG_DATA_LEN 256 // Max number of bytes encoded in each message
+#define MSG_LEN (MSG_DATA_LEN * 2) + 3 // Each byte encoded as two hex characters, plus space for opcode, newline, and null characters
+#define SECTOR_LEN 4096
+#define FLASH_SIZE (16*1024*1024)
 
 int main(int argc, char** argv) {
 
@@ -39,6 +43,19 @@ int main(int argc, char** argv) {
 	fseek(input, 0, SEEK_END);
 	long inputSize = ftell(input);
 	rewind(input);
+	if (inputSize > FLASH_SIZE) {
+		printf("ERROR: Not enough space available\n");
+		printf("\tInput file %s = %ld bytes\n", inputSize);
+		printf("\tFlash size = %ld bytes\n", FLASH_SIZE);
+		return 1;
+	}
+
+	int msgCount = inputSize / MSG_DATA_LEN;
+	if (inputSize % MSG_DATA_LEN) msgCount++;
+	int sectorCount = inputSize / SECTOR_LEN;
+	if (inputSize % SECTOR_LEN) sectorCount++;
+	printf("Using %ld of %ld available bytes\n", inputSize, FLASH_SIZE);
+	printf("%d sectors to be erased\n", sectorCount);
 
 	// Clean up
 	serial.closeDevice();
